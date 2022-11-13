@@ -1,9 +1,7 @@
-{-# LANGUAGE InstanceSigs #-}
 import Data.Tree ( Tree(Node), drawTree )
-import Data.Maybe ()
-import Data.List ( find )
-import qualified Data.Set as Set
-import           Data.Set (Set)
+import Data.Maybe ( Maybe )
+import Data.List ( find, foldr )
+import Data.Set ( Set, toList, union, empty, singleton, fromList, size )
 
 data Formula = Atom !Char !(Maybe Bool)
              | Not !Formula
@@ -27,7 +25,6 @@ getRightValueToPrinta (Just False) = "=F"
 getRightValueToPrinta Nothing = ""
 
 instance Show Formula where
-    show :: Formula -> String
     show (Atom c v) = c : getRightValueToPrinta v
     show (Not f) = "(!" ++ show f ++ ")"
     show (And f g) = "(" ++ show f ++ " /\\ " ++ show g ++ ")"
@@ -44,7 +41,7 @@ makeTreeF (Imply f g) = NodeF (Imply f g) (makeTreeF f) (makeTreeF g)
 makeTreeF (Equiv f g) = NodeF (Equiv f g) (makeTreeF f) (makeTreeF g)
 
 findCharInTabRes :: Set TabRes -> Char -> Maybe TabRes
-findCharInTabRes s c = find (\(TabRes _ v) -> v == c) (Set.toList s)
+findCharInTabRes s c = find (\(TabRes _ v) -> v == c) (toList s)
 
 getTabResValue :: Maybe TabRes -> Maybe Bool
 getTabResValue (Just (TabRes v _)) = Just v
@@ -77,33 +74,33 @@ areAllTrue [_] = True
 areAllTrue (x:xs) = all (isTrue x) xs && areAllTrue xs
 
 setFlatMap :: Ord a => (a -> Set a) -> Set a -> Set a
-setFlatMap f = foldl (\accum e -> Set.union accum (f e)) Set.empty
+setFlatMap f = foldr (union . f) empty
 
 solve :: Formula -> Set (Set TabRes)
-solve (Atom name _) = Set.singleton(Set.singleton (TabRes True name))
-solve (Not (Atom name _)) = Set.singleton(Set.singleton (TabRes False name))
+solve (Atom name _) = singleton(singleton (TabRes True name))
+solve (Not (Atom name _)) = singleton(singleton (TabRes False name))
 solve (Not (Not e)) = solve e
 solve (Not (And e1 e2)) = solve $ Or  (Not e1) (Not e2)
 solve (Not (Or  e1 e2)) = solve $ And (Not e1) (Not e2)
 solve (Not (Imply f1 f2)) = solve $ And f1 (Not f2)
 solve (Not (Equiv f1 f2)) = solve $ Or (And f1 (Not f2)) (And (Not f1) f2)
-solve (Or  e1 e2) = Set.union (solve e1) (solve e2)
+solve (Or  e1 e2) = solve e1 `union` solve e2
 solve (And f1 f2) = let
   s1 = solve f1
   s2 = solve f2
   in setFlatMap (\r1 ->
     setFlatMap(\r2 ->
-      let union = Set.union r1 r2
-      in if areAllTrue (Set.toList union)
-        then Set.singleton union
-        else Set.empty
+      let joined = r1 `union` r2
+      in if areAllTrue (toList joined)
+        then singleton joined
+        else empty
     ) s2
   ) s1
 solve (Imply f1 f2) = solve $ Or (Not f1) f2
 solve (Equiv f1 f2) = solve $ And (Imply f1 f2) (Imply f2 f1)
 
 findLongestSet :: Set (Set TabRes) -> Set TabRes
-findLongestSet = foldl (\accum e -> if Set.size e > Set.size accum then e else accum) Set.empty
+findLongestSet = foldr (\accum e -> if size e > size accum then e else accum) empty
 
 printTree :: Set (Set TabRes) -> Formula -> Tree String -> TreeF -> IO ()
 printTree setSetado formula tree treeF = do
