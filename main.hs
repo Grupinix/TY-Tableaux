@@ -80,7 +80,7 @@ solve :: Formula -> Set (Set TabRes)
 solve (Atom name _) = singleton(singleton (TabRes True name))
 solve (Not (Atom name _)) = singleton(singleton (TabRes False name))
 solve (Not (Not e)) = solve e
-solve (Not (And e1 e2)) = solve $ Or  (Not e1) (Not e2)
+solve (Not (And e1 e2)) = solve $ Or (Not e1) (Not e2)
 solve (Not (Or  e1 e2)) = solve $ And (Not e1) (Not e2)
 solve (Not (Imply f1 f2)) = solve $ And f1 (Not f2)
 solve (Not (Equiv f1 f2)) = solve $ Or (And f1 (Not f2)) (And (Not f1) f2)
@@ -102,24 +102,20 @@ solve (Equiv f1 f2) = solve $ And (Imply f1 f2) (Imply f2 f1)
 findLongestSet :: Set (Set TabRes) -> Set TabRes
 findLongestSet = foldr (\accum e -> if size e > size accum then e else accum) empty
 
-printTree :: Set (Set TabRes) -> Formula -> Tree String -> TreeF -> IO ()
-printTree setSetado formula tree treeF = do
-  if not (null setSetado)
-    then do
-      let solved = findLongestSet setSetado
-      let solvedTree = makeTreeFFixed formula solved
-      let solvedBaseTree = convertTreeFToTree solvedTree
-      putStrLn $ drawTree solvedBaseTree
-      putStrLn "Formula resolvida com sucesso"
-    else do
-      let unSolvedTree = makeTreeF formula
-      let unSolvedBaseTree = convertTreeFToTree unSolvedTree
-      putStrLn $ drawTree unSolvedBaseTree
-      putStrLn "Não é possível resolver a fórmula"
-
 main :: IO ()
 main = do
     let formula = (Atom 'p' Nothing `Imply` (Atom 'q' Nothing `Or` (Atom 'p' Nothing `Equiv` Not (Atom 'r' Nothing)))) `Imply` (Atom 'p' Nothing `And` Not (Atom 'q' Nothing `And` Atom 'r' Nothing))
     let semiSolved = solve formula
 
-    printTree semiSolved formula (convertTreeFToTree (makeTreeF formula)) (makeTreeF formula)
+    if not (null semiSolved)
+      then do
+        let solved = findLongestSet semiSolved
+        let solvedTree = makeTreeFFixed formula solved
+        let solvedBaseTree = convertTreeFToTree solvedTree
+        putStrLn $ drawTree solvedBaseTree
+        putStrLn "Formula resolvida com sucesso"
+      else do
+        let unSolvedTree = makeTreeF formula
+        let unSolvedBaseTree = convertTreeFToTree unSolvedTree
+        putStrLn $ drawTree unSolvedBaseTree
+        putStrLn "Não é possível resolver a fórmula"
