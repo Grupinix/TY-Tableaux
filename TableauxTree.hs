@@ -33,7 +33,7 @@ findCharInBranchResult s c = find (\(Atom cI b) -> cI == c) s
 getBranchResultValue :: Maybe Formula -> Maybe Bool
 getBranchResultValue (Just (Atom cI b)) = b
 getBranchResultValue (Just f) = Nothing
-getBranchResultValue Nothing = Nothing
+getBranchResultValue Nothing = Just False
 
 readCharInMaybeBranchResult :: Set Formula -> Char -> Maybe Bool
 readCharInMaybeBranchResult s c = getBranchResultValue(findCharInBranchResult s c)
