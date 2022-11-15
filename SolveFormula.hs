@@ -1,44 +1,45 @@
 module SolveFormula where
     
 import Data.Set ( Set, toList, union, empty, singleton, size )
-import BaseData ( Formula(Atom, Not, And, Or, Imply, Equiv), BranchResult(..) )
+import BaseData ( Formula(Atom, Not, And, Or, Imply, Equiv) )
 
 
-isTrue :: BranchResult -> BranchResult -> Bool
-isTrue (BranchResult b1 n1) (BranchResult b2 n2) = b1 == b2 || n1 /= n2
+isConsistent :: Formula -> Formula -> Bool
+isConsistent (Atom n1 b1) (Atom n2 b2 ) = b1 == b2 || n1 /= n2
+isConsistent f g = False
 
-areAllTrue :: [BranchResult] -> Bool
-areAllTrue [] = False
-areAllTrue [_] = True
-areAllTrue (x:xs) = all (isTrue x) xs && areAllTrue xs
+isListConsistent :: [Formula] -> Bool
+isListConsistent [] = False
+isListConsistent [_] = True
+isListConsistent (x:xs) = all (isConsistent x) xs && isListConsistent xs
 
 setFlatMap :: Ord a => (a -> Set a) -> Set a -> Set a
 setFlatMap f = foldr (union . f) empty
 
-solve :: Formula -> Set (Set BranchResult)
-solve (Atom name _) = singleton(singleton (BranchResult True name))
-solve (Not (Atom name _)) = singleton(singleton (BranchResult False name))
-solve (Not (Not e)) = solve e
-solve (Not (And e1 e2)) = solve $ Or (Not e1) (Not e2)
-solve (Not (Or  e1 e2)) = solve $ And (Not e1) (Not e2)
-solve (Not (Imply f1 f2)) = solve $ And f1 (Not f2)
-solve (Not (Equiv f1 f2)) = solve $ Or (And f1 (Not f2)) (And (Not f1) f2)
-solve (Or  e1 e2) = solve e1 `union` solve e2
-solve (And f1 f2) = let
-  s1 = solve f1
-  s2 = solve f2
+solve :: Formula -> Set (Set Formula)
+solve (Atom name _) = singleton(singleton (Atom name (Just True)))
+solve (Not (Atom name _)) = singleton(singleton (Atom name (Just False)))
+solve (Not (Not f)) = solve f
+solve (Not (And f g)) = solve (Or (Not f) (Not g))
+solve (Not (Or f g)) = solve (And (Not f) (Not g))
+solve (Not (Imply f g)) = solve (And f (Not g))
+solve (Not (Equiv f g)) = solve (Or (And f (Not g)) (And (Not f) g))
+solve (Imply f g) = solve (Or (Not f) g)
+solve (Equiv f g) = solve (And (Imply f g) (Imply f g))
+solve (Or f g) = solve f `union` solve g
+solve (And f g) = let
+  f1 = solve f
+  g1 = solve g
   in setFlatMap (\r1 ->
     setFlatMap(\r2 ->
       let joined = r1 `union` r2
-      in if areAllTrue (toList joined)
+      in if isListConsistent (toList joined)
         then singleton joined
         else empty
-    ) s2
-  ) s1
-solve (Imply f1 f2) = solve $ Or (Not f1) f2
-solve (Equiv f1 f2) = solve $ And (Imply f1 f2) (Imply f2 f1)
+    ) g1
+  ) f1
 
-findLongestSet :: Set (Set BranchResult) -> Set BranchResult
+findLongestSet :: Set (Set Formula) -> Set Formula
 findLongestSet = foldr (\accum e -> if size e > size accum then e else accum) empty
 
 canBeSolved :: Formula -> Bool
