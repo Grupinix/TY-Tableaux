@@ -9,7 +9,7 @@ data Formula = Atom !Char !(Maybe Bool)
              | Equiv !Formula !Formula
              deriving (Eq, Ord)
 
-data TabRes = TabRes !Bool !Char deriving (Eq, Ord)
+data BranchResult = BranchResult !Bool !Char deriving (Eq, Ord)
 
 data TreeF = Empty | NodeF {
     formula :: !Formula,
