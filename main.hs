@@ -7,7 +7,7 @@ import TableauxTree ( makeTreeF, makeTreeFFixed, convertTreeFToTree )
 
 main :: IO ()
 main = do
-    let formula = (Atom 'p' Nothing `Imply` (Atom 'q' Nothing `Or` (Atom 'p' Nothing `Equiv` Not (Atom 'r' Nothing)))) `And` (Atom 'p' Nothing `And` (Atom 'q' Nothing `And` Atom 'r' Nothing))
+    let formula = (Atom 'p' Nothing `Imply` Atom 'q' Nothing) `And` (Atom 'p' Nothing `And` Atom 'q' Nothing)
 
     if canBeSolved formula
       then do
@@ -15,9 +15,9 @@ main = do
         let solvedTree = makeTreeFFixed formula solved
         let solvedBaseTree = convertTreeFToTree solvedTree
         putStrLn $ drawTree solvedBaseTree
-        putStrLn "Formula resolvida com sucesso"
+        putStrLn "Foi encontrado um ramo sem contradição"
       else do
         let unSolvedTree = makeTreeF formula
         let unSolvedBaseTree = convertTreeFToTree unSolvedTree
         putStrLn $ drawTree unSolvedBaseTree
-        putStrLn "Não é possível resolver a fórmula"
+        putStrLn "Há contradição em todos os ramos"
