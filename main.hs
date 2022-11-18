@@ -5,9 +5,30 @@ import SolveFormula ( solve, findLongestSet, canBeSolved )
 import TableauxTree ( makeTreeF, makeTreeFFixed, convertTreeFToTree )
 
 
+getSeccondParametter :: String -> Int -> Int -> Int -> Int
+getSeccondParametter [] _ _ virgula = virgula
+getSeccondParametter string indice quantParenteses virgula = case string !! indice of
+  '(' -> getSeccondParametter string (indice + 1) (quantParenteses + 1) virgula
+  ',' -> if quantParenteses == 1 then getSeccondParametter string (indice + 1) quantParenteses indice else getSeccondParametter string (indice + 1) quantParenteses virgula
+  ')' -> if quantParenteses == 1 then virgula else getSeccondParametter string (indice + 1) (quantParenteses - 1) virgula
+  _ -> getSeccondParametter string (indice + 1) quantParenteses virgula
+
+
+parseStringToFormula :: String -> Int -> Formula
+parseStringToFormula string indice = case string !! indice of
+  '>' -> Imply (parseStringToFormula string (indice + 2)) (parseStringToFormula string ((getSeccondParametter string (indice + 1) 0 0)))
+  '-' -> Equiv (parseStringToFormula string (indice + 2)) (parseStringToFormula string ((getSeccondParametter string (indice + 1) 0 0)))
+  'v' -> Or (parseStringToFormula string (indice + 2)) (parseStringToFormula string ((getSeccondParametter string (indice + 1) 0 0)))
+  '^' -> And (parseStringToFormula string (indice + 2)) (parseStringToFormula string ((getSeccondParametter string (indice + 1) 0 0)))
+  '!' -> Not (parseStringToFormula string (indice + 1))
+  ',' -> parseStringToFormula string (indice + 1)
+  c -> Atom c Nothing
+
+
 main :: IO ()
 main = do
-    let formula = (Atom 'p' Nothing `Imply` Atom 'q' Nothing) `And` (Atom 'p' Nothing `And` Atom 'q' Nothing)
+    stringa <- getLine
+    let formula = parseStringToFormula stringa 0
 
     if canBeSolved formula
       then do
