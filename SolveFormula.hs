@@ -1,46 +1,47 @@
 module SolveFormula where
-    
-import Data.Set ( Set, toList, union, empty, singleton, size )
-import BaseData ( Formula(Atom, Not, And, Or, Imply, Equiv) )
 
+import Data.Tree ( Tree(Node) )
+import Data.Set ( Set, filter, null, member, findMin, deleteMin, size, singleton, fromList )
+import BaseData ( Formula(Atom, Not, And, Or, Imply, Equiv), SetStatus(IsFormula, Open, Closed), Tableaux )
 
-isConsistent :: Formula -> Formula -> Bool
-isConsistent (Atom n1 b1) (Atom n2 b2 ) = b1 == b2 || n1 /= n2
-isConsistent f g = False
+isAtom :: Formula -> Bool
+isAtom (Atom _) = True
+isAtom (Not (Atom _)) = True
+isAtom _ = False
 
-isListConsistent :: [Formula] -> Bool
-isListConsistent [] = False
-isListConsistent [_] = True
-isListConsistent (x:xs) = all (isConsistent x) xs && isListConsistent xs
+allAtoms :: Set Formula -> Bool
+allAtoms sp = Data.Set.null (Data.Set.filter (not . isAtom) sp)
 
-setFlatMap :: Ord a => (a -> Set a) -> Set a -> Set a
-setFlatMap f = foldr (union . f) empty
+oposite :: Formula -> Formula
+oposite (Not p) = p
+oposite p = Not p
 
-solve :: Formula -> Set (Set Formula)
-solve (Atom name _) = singleton(singleton (Atom name (Just True)))
-solve (Not (Atom name _)) = singleton(singleton (Atom name (Just False)))
-solve (Not (Not f)) = solve f
-solve (Not (And f g)) = solve (Or (Not f) (Not g))
-solve (Not (Or f g)) = solve (And (Not f) (Not g))
-solve (Not (Imply f g)) = solve (And f (Not g))
-solve (Not (Equiv f g)) = solve (Or (And f (Not g)) (And (Not f) g))
-solve (Imply f g) = solve (Or (Not f) g)
-solve (Equiv f g) = solve (And (Imply f g) (Imply f g))
-solve (Or f g) = solve f `union` solve g
-solve (And f g) = let
-  f1 = solve f
-  g1 = solve g
-  in setFlatMap (\r1 ->
-    setFlatMap(\r2 ->
-      let joined = r1 `union` r2
-      in if isListConsistent (toList joined)
-        then singleton joined
-        else empty
-    ) g1
-  ) f1
+hasContradiction :: Set Formula -> Bool
+hasContradiction sp
+    | size sp <= 1 = False
+    | otherwise = do
+      let min = findMin sp
+      let setWithoutMin = deleteMin sp
+      member (oposite min) setWithoutMin || hasContradiction setWithoutMin
 
-findLongestSet :: Set (Set Formula) -> Set Formula
-findLongestSet = foldr (\accum e -> if size e > size accum then e else accum) empty
+getStatus :: Set Formula -> SetStatus
+getStatus sp
+    | hasContradiction sp = Closed
+    | (not . allAtoms) sp = IsFormula
+    | otherwise = Open
 
-canBeSolved :: Formula -> Bool
-canBeSolved f = not (null (solve f))
+isNodeClosed :: Tableaux -> Bool
+isNodeClosed (Node (f, b) children) = b
+
+solve :: Formula -> [Set Formula]
+solve (And p q) = [fromList [p, q]]
+solve (Not (Or p q)) = [fromList [Not p, Not q]]
+solve (Not (Imply p q)) = [fromList [p, Not q]]
+solve (Not (Not p)) = [fromList [p]]
+solve (Not (And p q)) = map singleton [Not p, Not q]
+solve (Not (Equiv p q)) = map singleton [Not (Imply p q), Not (Imply q p)]
+solve (Equiv p q) = [fromList [Imply p q, Imply q p]]
+solve (Or p q) = map singleton [p, q]
+solve (Imply p q) = map singleton [Not p, q]
+solve (Not p) = map singleton [Not p]
+solve p = map singleton [p]

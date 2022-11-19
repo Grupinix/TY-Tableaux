@@ -1,54 +1,43 @@
 module TableauxTree where
 
-import Data.Tree ( Tree(Node) )
-import Data.List ( find )
-import Data.Set ( Set )
-import BaseData ( TreeF(NodeF, Empty), Formula(..) ) 
+import SolveFormula ( solve, getStatus, isAtom, isNodeClosed )
+import BaseData ( Formula(Atom, Not, And, Or, Imply, Equiv) , Tableaux, NodeType, SetStatus(IsFormula, Open, Closed) )
+
+import Data.Set ( toList, Set, partition, findMin, delete, union )
+import Data.List ( intercalate )
+import Data.Tree ( Tree(Node), drawTree )
+import Data.ByteString (intercalate)
 
 
 instance Show Formula where
-    show (Atom c v) = c : getRightValueToPrinta v
+    show (Atom c) = c : ""
     show (Not f) = "(!" ++ show f ++ ")"
     show (And f g) = "(" ++ show f ++ " /\\ " ++ show g ++ ")"
     show (Or f g) = "(" ++ show f ++ " \\/ " ++ show g ++ ")"
     show (Imply f g) = "(" ++ show f ++ " -> " ++ show g ++ ")"
     show (Equiv f g) = "(" ++ show f ++ " <-> " ++ show g ++ ")"
 
-getRightValueToPrinta :: Maybe Bool -> String
-getRightValueToPrinta (Just True) = "=T"
-getRightValueToPrinta (Just False) = "=F"
-getRightValueToPrinta Nothing = ""
+formulaListToStringList :: [Formula] -> [String]
+formulaListToStringList = map show
 
-makeTreeF :: Formula -> TreeF
-makeTreeF (Atom c v) = NodeF (Atom c v) Empty Empty
-makeTreeF (Not f) = NodeF (Not f) (makeTreeF f) Empty
-makeTreeF (And f g) = NodeF (And f g) (makeTreeF f) (makeTreeF g)
-makeTreeF (Or f g) = NodeF (Or f g) (makeTreeF f) (makeTreeF g)
-makeTreeF (Imply f g) = NodeF (Imply f g) (makeTreeF f) (makeTreeF g)
-makeTreeF (Equiv f g) = NodeF (Equiv f g) (makeTreeF f) (makeTreeF g)
+listToString :: [Formula] -> String
+listToString f = Data.List.intercalate ", " (formulaListToStringList f)
 
-findCharInBranchResult :: Set Formula -> Char -> Maybe Formula
-findCharInBranchResult s c = find (\(Atom cI b) -> cI == c) s
+showNode :: NodeType -> String
+showNode (sp, res) = listToString (toList sp) ++ if res then " {x}" else " {0}"
 
-getBranchResultValue :: Maybe Formula -> Maybe Bool
-getBranchResultValue (Just (Atom cI b)) = b
-getBranchResultValue (Just f) = Nothing
-getBranchResultValue Nothing = Nothing
+showTableaux :: Tableaux -> String
+showTableaux = drawTree . fmap showNode
 
-readCharInMaybeBranchResult :: Set Formula -> Char -> Maybe Bool
-readCharInMaybeBranchResult s c = getBranchResultValue(findCharInBranchResult s c)
-
-makeTreeFFixed :: Formula -> Set Formula -> TreeF
-makeTreeFFixed (Atom c v) st = NodeF (Atom c (readCharInMaybeBranchResult st c)) Empty Empty
-makeTreeFFixed (Not f) st = NodeF (Not f) (makeTreeFFixed f st) Empty
-makeTreeFFixed (And f g) st = NodeF (And f g) (makeTreeFFixed f st) (makeTreeFFixed g st)
-makeTreeFFixed (Or f g) st = NodeF (Or f g) (makeTreeFFixed f st) (makeTreeFFixed g st)
-makeTreeFFixed (Imply f g) st = NodeF (Imply f g) (makeTreeFFixed f st) (makeTreeFFixed g st)
-makeTreeFFixed (Equiv f g) st = NodeF (Equiv f g) (makeTreeFFixed f st) (makeTreeFFixed g st)
-
-convertTreeFToTree :: TreeF -> Tree String
-convertTreeFToTree Empty = Node "" []
-convertTreeFToTree (NodeF f Empty Empty) = Node (show f) []
-convertTreeFToTree (NodeF f l Empty) = Node (show f) [convertTreeFToTree l]
-convertTreeFToTree (NodeF f Empty r) = Node (show f) [convertTreeFToTree r]
-convertTreeFToTree (NodeF f l r) = Node (show f) [convertTreeFToTree l, convertTreeFToTree r]
+makeTree :: Set Formula -> Tableaux
+makeTree sp = do
+    let (nonAtoms, _) = partition (not . isAtom) sp
+    let min = findMin nonAtoms
+    let setAux = delete min sp
+    let res = map (makeTree . union setAux) (solve min)
+    let allClosed = all isNodeClosed res
+    
+    case getStatus sp of
+      Open -> Node (sp, False) []
+      Closed -> Node (sp, True) []
+      IsFormula -> Node (sp, allClosed) res

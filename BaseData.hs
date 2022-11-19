@@ -1,7 +1,10 @@
 module BaseData where
 
+import Data.Set (Set)
+import Data.Tree (Tree)
 
-data Formula = Atom !Char !(Maybe Bool)
+
+data Formula = Atom !Char
              | Not !Formula
              | And !Formula !Formula
              | Or !Formula !Formula
@@ -14,3 +17,8 @@ data TreeF = Empty | NodeF {
     left :: !TreeF,
     right :: !TreeF
 } deriving (Eq, Ord)
+
+data SetStatus = IsFormula | Open | Closed deriving (Eq, Show)
+
+type NodeType = (Set Formula, Bool)
+type Tableaux = Tree NodeType

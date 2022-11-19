@@ -24,7 +24,7 @@ Execute o comando `./haskell-tableaux` e depois insira a fórmula.
 
 #### 1:
 `./haskell-tableaux`
->  ^(>(a,b),^(a,!b))
+> '^(>(a,b),^(a,!b))'
 
 O exemplo acima é a representação de:
 
@@ -32,7 +32,7 @@ O exemplo acima é a representação de:
 
 #### 2:
 `./haskell-tableaux`
->  v(>(a,b),-(a,b))
+> 'v(>(a,b),-(a,b))'
 
 O exemplo acima é a representação de:
 
@@ -40,8 +40,22 @@ O exemplo acima é a representação de:
 
 #### 3:
 `./haskell-tableaux`
->  ^(a,!a)
+> '^(a,!a)'
 
 O exemplo acima é a representação de:
 
 > (a ^ !a)
+
+### 4:
+`./haskell-tableaux`
+> '>(v(p,^(q,r)),^(v(p,q),v(p,r)))'
+
+O exemplo acima é a representação de:
+> ((p v (q ^ r)) -> ((p v q) ^ (p v r)))
+
+### 5:
+`./haskell-tableaux`
+> '>(b,^(a,v(b,a)))'
+
+O exemplo acima é a representação de:
+> (b -> (a ^ (b v a)))
